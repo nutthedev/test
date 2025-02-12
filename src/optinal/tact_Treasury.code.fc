@@ -1,0 +1,147 @@
+#pragma version =0.4.4;
+#pragma allow-post-modification;
+#pragma compute-asm-ltr;
+
+#include "tact_Treasury.headers.fc";
+#include "tact_Treasury.stdlib.fc";
+#include "tact_Treasury.constants.fc";
+#include "tact_Treasury.storage.fc";
+
+;;
+;; Contract Treasury functions
+;;
+
+(slice, int) $Treasury$_contract_init() impure inline_ref {
+    var (($self'deployer, $self'totalSupply)) = (null(), null());
+    $self'deployer = __tact_context_get_sender();
+    $self'totalSupply = 0;
+    return ($self'deployer, $self'totalSupply);
+}
+
+((slice, int), slice) $Treasury$_fun_boxAddress((slice, int) $self, slice $owner) impure inline_ref {
+    var (($self'deployer, $self'totalSupply)) = $self;
+    var $fresh$ret_0 = $global_contractAddress($Box$_init_child(__tact_context_sys, $global_myAddress(), $owner));
+    return (($self'deployer, $self'totalSupply), $fresh$ret_0);
+}
+
+((slice, int), slice) $Treasury$_fun_getTON((slice, int) $self) impure inline_ref {
+    var (($self'deployer, $self'totalSupply)) = $self;
+    var $fresh$ret_1 = $Int$_fun_toCoinsString($global_myBalance());
+    return (($self'deployer, $self'totalSupply), $fresh$ret_1);
+}
+
+;;
+;; Receivers of a Contract Treasury
+;;
+
+(((slice, int)), ()) $Treasury$_internal_binary_Deposit((slice, int) $self, (int, slice) $msg) impure inline {
+    var ($self'deployer, $self'totalSupply) = $self;
+    var ($msg'amount, $msg'to) = $msg;
+    var ($init'code, $init'data) = $Box$_init_child(__tact_context_sys, $global_myAddress(), $msg'to);
+    $global_send($SendParameters$_constructor_to_body_value_mode_code_data($global_contractAddress(($init'code, $init'data)), $InternalAddTokens$_store_cell($InternalAddTokens$_constructor_amount_origin($Context$_get_value(__tact_context_get()), $global_myAddress())), 30000000, 2, $init'code, $init'data));
+    ($self'deployer, $self'totalSupply)~$Treasury$_fun_reply(__gen_cell_comment_043794603a979471ff05380a2f79318eee6612ccf3aa4bc5ede5de4fbdb534ca());
+    return (($self'deployer, $self'totalSupply), ());
+}
+
+((slice, int), ()) $Treasury$_internal_text_5092b5dce0715a57dd969f5fb5a6f93025a0b02eab329470ca2b365ca0d7e93a((slice, int) $self) impure inline {
+    var ($self'deployer, $self'totalSupply) = $self;
+    throw_unless(15509, ( __tact_slice_eq_bits($self'deployer, __tact_context_get_sender()) ));
+    $global_send($SendParameters$_constructor_to_bounce_value_mode($self'deployer, true, 0, 130));
+    return (($self'deployer, $self'totalSupply), ());
+}
+
+(((slice, int)), ()) $Treasury$_internal_binary_Deploy((slice, int) $self, (int) $deploy) impure inline {
+    var ($self'deployer, $self'totalSupply) = $self;
+    var ($deploy'queryId) = $deploy;
+    ($self'deployer, $self'totalSupply)~$Treasury$_fun_notify($DeployOk$_store_cell($DeployOk$_constructor_queryId($deploy'queryId)));
+    return (($self'deployer, $self'totalSupply), ());
+}
+
+;;
+;; Get methods of a Contract Treasury
+;;
+
+_ %boxAddress(slice $owner) method_id(80812) {
+    slice $owner = __tact_verify_address($owner);
+    var self = $Treasury$_contract_load();
+    var res = self~$Treasury$_fun_boxAddress($owner);
+    return res;
+}
+
+_ %getTON() method_id(70560) {
+    var self = $Treasury$_contract_load();
+    var res = self~$Treasury$_fun_getTON();
+    return res;
+}
+
+_ lazy_deployment_completed() method_id {
+    return get_data().begin_parse().load_int(1);
+}
+
+;;
+;; Routing of a Contract Treasury
+;;
+
+((slice, int), int) $Treasury$_contract_router_internal((slice, int) self, int msg_bounced, slice in_msg) impure inline_ref {
+    ;; Handle bounced messages
+    if (msg_bounced) {
+        return (self, true);
+    }
+    
+    ;; Parse incoming message
+    int op = 0;
+    if (slice_bits(in_msg) >= 32) {
+        op = in_msg.preload_uint(32);
+    }
+    
+    
+    ;; Receive Deposit message
+    if (op == 2699315230) {
+        var msg = in_msg~$Deposit$_load();
+        self~$Treasury$_internal_binary_Deposit(msg);
+        return (self, true);
+    }
+    
+    ;; Receive Deploy message
+    if (op == 2490013878) {
+        var msg = in_msg~$Deploy$_load();
+        self~$Treasury$_internal_binary_Deploy(msg);
+        return (self, true);
+    }
+    
+    ;; Text Receivers
+    if (op == 0) {
+        var text_op = slice_hash(in_msg);
+        
+        ;; Receive "withdraw all" message
+        if (text_op == 0x5092b5dce0715a57dd969f5fb5a6f93025a0b02eab329470ca2b365ca0d7e93a) {
+            self~$Treasury$_internal_text_5092b5dce0715a57dd969f5fb5a6f93025a0b02eab329470ca2b365ca0d7e93a();
+            return (self, true);
+        }
+    }
+    
+    return (self, false);
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    
+    ;; Context
+    var cs = in_msg_cell.begin_parse();
+    var msg_flags = cs~load_uint(4);
+    var msg_bounced = -(msg_flags & 1);
+    slice msg_sender_addr = __tact_verify_address(cs~load_msg_addr());
+    __tact_context = (msg_bounced, msg_sender_addr, msg_value, cs);
+    __tact_context_sender = msg_sender_addr;
+    
+    ;; Load contract data
+    var self = $Treasury$_contract_load();
+    
+    ;; Handle operation
+    int handled = self~$Treasury$_contract_router_internal(msg_bounced, in_msg);
+    
+    ;; Throw if not handled
+    throw_unless(130, handled);
+    
+    ;; Persist state
+    $Treasury$_contract_store(self);
+}

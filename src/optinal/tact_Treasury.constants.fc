@@ -1,0 +1,4 @@
+;; Comment "Deposited"
+cell __gen_cell_comment_043794603a979471ff05380a2f79318eee6612ccf3aa4bc5ede5de4fbdb534ca() asm """
+    B{b5ee9c7241010101000f00001a000000004465706f7369746564645082da} B>boc PUSHREF
+""";
