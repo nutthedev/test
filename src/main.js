@@ -1,6 +1,7 @@
 import { Buffer } from "buffer";
 import { TonConnectUI } from "@tonconnect/ui";
-import { Address, toNano, beginCell } from "@ton/core";
+import { toNano, beginCell, Address, TupleBuilder } from "@ton/core";
+import { TonClient } from "ton";
 import TonWeb from "tonweb";
 
 if (!window.Buffer) {
@@ -44,7 +45,7 @@ async function withdraw(contractAddress) {
         .storeUint(0, 32)
         .storeStringTail("withdraw all")
         .endCell();
-    
+
     try {
         const tx = await tonConnectUI.sendTransaction({
             validUntil: Math.floor(Date.now() / 1000) + 600,
@@ -75,7 +76,7 @@ async function deposit() {
         .storeInt(amount, 257)
         .storeAddress(toAddress)
         .endCell();
-    
+
     try {
         const tx = await tonConnectUI.sendTransaction({
             validUntil: Math.floor(Date.now() / 1000) + 600,
@@ -97,20 +98,29 @@ async function deposit() {
 
 // HELP ME HERE//
 
+window.getBal = getBal;
+
+async function getBal() {
+    //wallet balance
+    const balance = await tonweb.getBalance(connectedWallet.tonkeeperAddress);
+    console.log({ balance });
+}
+
 window.call_getTON = call_getTON;
 
 async function call_getTON() {
     const connectedWallet = await getWalletAddress();
     console.log({ connectedWallet });
 
-    //wallet balance
-    const balance =  await tonweb.getBalance(connectedWallet.tonkeeperAddress);
-    console.log({ balance });
+    const contractAddress = Address.parse("EQCa_BJaON14OzOY0h4rzdxSf8pm6ARCb5xZmEyjLbS9JGTE");
+    const client = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC' });
 
-    //smartcontract getTON
-    const contractAddress = "EQCa_BJaON14OzOY0h4rzdxSf8pm6ARCb5xZmEyjLbS9JGTE";
+    const result = await client.callGetMethod(contractAddress, 'getTON');
+    const responseValue = result.stack.readString();
+    console.log({ responseValue });
 
-    /* should return 'getTON' value from smartcontract */
+    /*const getTON = result.stack.readString();
+    console.log({ getTON });*/
 }
 
 window.call_boxAddress = call_boxAddress;
@@ -119,14 +129,30 @@ async function call_boxAddress() {
     const connectedWallet = await getWalletAddress();
     console.log({ connectedWallet });
 
-    const contractAddress = "EQCa_BJaON14OzOY0h4rzdxSf8pm6ARCb5xZmEyjLbS9JGTE";
+    const contractAddress = Address.parse("EQCa_BJaON14OzOY0h4rzdxSf8pm6ARCb5xZmEyjLbS9JGTE");
+    const walletAddress = Address.parse(connectedWallet.hexAddress);
+    const client = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC' });
 
-    /* should return 'boxAddress' address from smartcontract
-    
-    by setting parameter is UQCGYtmVT1yZS4sd8vDIyubtWrlwlLYdWHBBx7ILJnEkFicG
-    
-    result should be EQBsSWY5zRRgsI5qPZ9-pDqrSWsyhbADZ6880S1BRqu9eU00
+    const stack = new TupleBuilder();
+    stack.writeAddress(walletAddress);
 
-    (because treasury will create one box address per user wallet was called deposit)
-    */
+    const result = await client.callGetMethod(contractAddress, 'boxAddress', stack.build());
+    const responseValue = result.stack.readAddress();
+
+    const addressOpt = responseValue.toString();
+    console.log({ addressOpt });
+}
+
+window.systemCcall = convertTextTofunc;
+
+async function convertTextTofunc(params) {
+    const str = params;
+
+    const connectedWallet = await getWalletAddress();
+
+    const functionName = str.split('(')[0];
+    const args = str.slice(functionName.length + 1, -1);
+    const parsedArgs = args.split(',').map(arg => arg.trim());
+
+    console.log({ connectedWallet, functionName, parsedArgs });
 }
